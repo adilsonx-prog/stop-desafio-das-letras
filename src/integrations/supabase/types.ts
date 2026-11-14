@@ -14,13 +14,222 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      player_secrets: {
+        Row: {
+          player_id: string
+          secret: string
+        }
+        Insert: {
+          player_id: string
+          secret?: string
+        }
+        Update: {
+          player_id?: string
+          secret?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_secrets_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: true
+            referencedRelation: "room_players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_players: {
+        Row: {
+          id: string
+          joined_at: string
+          last_round_points: number
+          name: string
+          room_id: string
+          score: number
+        }
+        Insert: {
+          id?: string
+          joined_at?: string
+          last_round_points?: number
+          name: string
+          room_id: string
+          score?: number
+        }
+        Update: {
+          id?: string
+          joined_at?: string
+          last_round_points?: number
+          name?: string
+          room_id?: string
+          score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_players_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rooms: {
+        Row: {
+          code: string
+          created_at: string
+          current_letter: string | null
+          host_player_id: string | null
+          id: string
+          round_number: number
+          round_started_at: string | null
+          status: string
+          stopped_at: string | null
+          stopped_by: string | null
+          updated_at: string
+          used_letters: string[]
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          current_letter?: string | null
+          host_player_id?: string | null
+          id?: string
+          round_number?: number
+          round_started_at?: string | null
+          status?: string
+          stopped_at?: string | null
+          stopped_by?: string | null
+          updated_at?: string
+          used_letters?: string[]
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          current_letter?: string | null
+          host_player_id?: string | null
+          id?: string
+          round_number?: number
+          round_started_at?: string | null
+          status?: string
+          stopped_at?: string | null
+          stopped_by?: string | null
+          updated_at?: string
+          used_letters?: string[]
+        }
+        Relationships: []
+      }
+      round_answers: {
+        Row: {
+          answers: Json
+          id: string
+          player_id: string
+          points: Json
+          room_id: string
+          round_number: number
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          answers?: Json
+          id?: string
+          player_id: string
+          points?: Json
+          room_id: string
+          round_number: number
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          answers?: Json
+          id?: string
+          player_id?: string
+          points?: Json
+          room_id?: string
+          round_number?: number
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "round_answers_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "room_players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "round_answers_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      call_stop: {
+        Args: {
+          p_answers: Json
+          p_player_id: string
+          p_round: number
+          p_secret: string
+        }
+        Returns: undefined
+      }
+      check_player: {
+        Args: { p_player_id: string; p_secret: string }
+        Returns: boolean
+      }
+      create_room: { Args: { p_name: string }; Returns: Json }
+      finish_round: {
+        Args: { p_player_id: string; p_secret: string }
+        Returns: undefined
+      }
+      join_room: { Args: { p_code: string; p_name: string }; Returns: Json }
+      leave_room: {
+        Args: { p_player_id: string; p_secret: string }
+        Returns: undefined
+      }
+      reset_room: {
+        Args: { p_player_id: string; p_secret: string }
+        Returns: undefined
+      }
+      save_answers: {
+        Args: {
+          p_answers: Json
+          p_player_id: string
+          p_round: number
+          p_secret: string
+        }
+        Returns: undefined
+      }
+      start_round: {
+        Args: { p_player_id: string; p_secret: string }
+        Returns: undefined
+      }
+      stop_categories: { Args: never; Returns: string[] }
+      stop_clean_answers: { Args: { p_answers: Json }; Returns: Json }
+      stop_normalize: { Args: { t: string }; Returns: string }
+      stop_verify_player: {
+        Args: { p_player_id: string; p_secret: string }
+        Returns: {
+          id: string
+          joined_at: string
+          last_round_points: number
+          name: string
+          room_id: string
+          score: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "room_players"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       [_ in never]: never
