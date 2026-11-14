@@ -4,7 +4,7 @@
  */
 @import "tailwindcss" source(none);
 @source "../src";
-@source inline("bg-cat-{1,2,3,4,5,6,7,8,9}");
+@source inline("bg-cat-{1,2,3,4,5,6,7,8,9,10,11,12,13}");
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
@@ -61,6 +61,10 @@
   --color-cat-7: var(--cat-7);
   --color-cat-8: var(--cat-8);
   --color-cat-9: var(--cat-9);
+  --color-cat-10: var(--cat-10);
+  --color-cat-11: var(--cat-11);
+  --color-cat-12: var(--cat-12);
+  --color-cat-13: var(--cat-13);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -119,6 +123,10 @@
   --cat-7: oklch(0.74 0.14 235);
   --cat-8: oklch(0.8 0.15 160);
   --cat-9: oklch(0.78 0.16 10);
+  --cat-10: oklch(0.76 0.13 210);
+  --cat-11: oklch(0.8 0.16 115);
+  --cat-12: oklch(0.76 0.19 340);
+  --cat-13: oklch(0.77 0.14 280);
 
   --gradient-canvas:
     radial-gradient(circle at 10% 0%, oklch(0.32 0.11 250 / 0.9), transparent 55%),
@@ -128,6 +136,12 @@
   --gradient-stop: radial-gradient(circle at 35% 30%, oklch(0.72 0.23 30), var(--stop) 55%, var(--stop-shade));
   --gradient-letter: linear-gradient(160deg, oklch(0.92 0.16 95), var(--primary) 45%, oklch(0.78 0.18 65));
   --shadow-card: 0 10px 30px -12px oklch(0.1 0.05 258 / 0.7);
+  --gradient-sogra: linear-gradient(120deg, oklch(0.72 0.2 350), oklch(0.78 0.18 30) 55%, oklch(0.87 0.175 92));
+  --sogra-glow: 0 0 0 3px color-mix(in oklab, var(--cat-12) 45%, transparent), 0 12px 30px -10px oklch(0.72 0.2 350 / 0.55);
+  /* Text-only shades: same as the fill colors on the dark canvas. */
+  --primary-text: var(--primary);
+  --accent-text: var(--accent);
+  --success-text: var(--success);
   --shadow-glow-stop: 0 0 0 0 color-mix(in oklab, var(--stop) 60%, transparent);
 
   --chart-1: var(--cat-1);
@@ -144,6 +158,50 @@
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
 }
+
+/*
+ * Light theme: soft grey canvas, white cards, dark text, same candy buttons.
+ * Chosen per device (localStorage), never shared between players.
+ */
+:root.light {
+  --background: oklch(0.975 0.006 250);
+  --foreground: oklch(0.24 0.05 258);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.24 0.05 258);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.24 0.05 258);
+  --primary: oklch(0.85 0.17 88);
+  --primary-shade: oklch(0.7 0.16 70);
+  --primary-foreground: oklch(0.22 0.06 258);
+  --secondary: oklch(0.94 0.012 250);
+  --secondary-foreground: oklch(0.24 0.05 258);
+  --muted: oklch(0.95 0.01 250);
+  --muted-foreground: oklch(0.48 0.04 258);
+  --accent: oklch(0.76 0.14 185);
+  --accent-shade: oklch(0.56 0.12 190);
+  --accent-foreground: oklch(0.2 0.055 258);
+  --success: oklch(0.72 0.19 145);
+  --success-foreground: oklch(0.2 0.055 258);
+  --border: oklch(0.89 0.015 250);
+  --input: oklch(0.86 0.02 250);
+  --ring: oklch(0.7 0.16 70);
+
+  --primary-text: oklch(0.6 0.15 65);
+  --accent-text: oklch(0.52 0.11 195);
+  --success-text: oklch(0.52 0.16 145);
+
+  --gradient-canvas:
+    radial-gradient(circle at 10% 0%, oklch(0.93 0.06 92 / 0.7), transparent 50%),
+    radial-gradient(circle at 100% 30%, oklch(0.93 0.05 190 / 0.6), transparent 50%),
+    radial-gradient(circle at 0% 100%, oklch(0.94 0.04 20 / 0.6), transparent 55%),
+    var(--background);
+  --shadow-card: 0 8px 24px -14px oklch(0.3 0.05 258 / 0.35);
+}
+
+/* Yellow / turquoise / green text needs deeper shades to read on white. */
+:root.light .text-primary { color: var(--primary-text); }
+:root.light .text-accent { color: var(--accent-text); }
+:root.light .text-success { color: var(--success-text); }
 
 @layer base {
   * {
@@ -175,6 +233,14 @@
 
 @utility bg-stop-gradient {
   background: var(--gradient-stop);
+}
+
+@utility bg-sogra-gradient {
+  background: var(--gradient-sogra);
+}
+
+@utility shadow-sogra {
+  box-shadow: var(--sogra-glow);
 }
 
 @utility bg-letter-gradient {
