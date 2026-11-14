@@ -202,6 +202,8 @@
 :root.light .text-primary { color: var(--primary-text); }
 :root.light .text-accent { color: var(--accent-text); }
 :root.light .text-success { color: var(--success-text); }
+/* The big outlined logo keeps its bright yellow. */
+:root.light .text-outline.text-primary { color: var(--primary); }
 
 @layer base {
   * {
