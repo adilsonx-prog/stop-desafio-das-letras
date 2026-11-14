@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Loader2, LogIn, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -50,7 +50,7 @@ function Home() {
     }
   };
 
-  const join = async (e: React.FormEvent) => {
+  const join = async (e: FormEvent) => {
     e.preventDefault();
     const c = normalizeCode(code);
     if (!validName) return toast.error("Digite seu nome primeiro.");
