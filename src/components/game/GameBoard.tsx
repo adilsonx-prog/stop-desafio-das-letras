@@ -98,18 +98,33 @@ export function GameBoard({ room, players, session, online }: Props) {
             const valid = isValidAnswer(value, letter);
             const filled = value.trim().length > 0;
             return (
-              <li key={c.key} className="surface flex items-center gap-3 p-3">
+              <li
+                key={c.key}
+                className={cn(
+                  "surface relative flex items-center gap-3 p-3",
+                  c.featured && "mt-5 border-cat-12 shadow-sogra",
+                )}
+              >
+                {c.featured && (
+                  <span className="absolute -top-3 left-4 -rotate-3 rounded-full bg-sogra-gradient px-3 py-0.5 font-display text-xs tracking-wide text-primary-foreground shadow-md">
+                    😂 Categoria da zoeira
+                  </span>
+                )}
                 <span
-                  className={cn("grid h-12 w-12 shrink-0 place-items-center rounded-xl text-2xl", `bg-${c.color}`)}
+                  className={cn(
+                    "grid h-12 w-12 shrink-0 place-items-center rounded-xl text-2xl",
+                    c.featured ? "animate-wobble bg-sogra-gradient" : `bg-${c.color}`,
+                  )}
                   aria-hidden
                 >
                   {c.emoji}
                 </span>
                 <label className="min-w-0 flex-1">
                   <span className="flex items-baseline gap-2">
-                    <span className="font-display text-base">{c.label}</span>
-                    <span className="truncate text-xs text-muted-foreground">{c.hint}</span>
+                    <span className="shrink-0 font-display text-xs text-muted-foreground tabular-nums">{i + 1}.</span>
+                    <span className="truncate font-display text-base">{c.label}</span>
                   </span>
+                  <span className="block truncate text-xs text-muted-foreground">{c.hint}</span>
                   <input
                     ref={(el) => {
                       inputs.current[i] = el;
@@ -119,10 +134,11 @@ export function GameBoard({ room, players, session, online }: Props) {
                     maxLength={40}
                     autoComplete="off"
                     autoCorrect="off"
-                    autoCapitalize="words"
+                    autoCapitalize={c.featured ? "sentences" : "words"}
                     spellCheck={false}
                     enterKeyHint={i === CATEGORIES.length - 1 ? "done" : "next"}
                     placeholder={`${letter}…`}
+                    aria-label={c.label}
                     onChange={(e) => setAnswer(c.key, e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
@@ -132,7 +148,7 @@ export function GameBoard({ room, players, session, online }: Props) {
                         else (e.target as HTMLInputElement).blur();
                       }
                     }}
-                    className="mt-1 h-11 w-full rounded-lg border-2 border-input bg-background px-3 text-lg font-bold outline-none placeholder:text-muted-foreground/50 focus:border-primary disabled:opacity-70"
+                    className="mt-1.5 h-12 w-full rounded-xl border-2 border-input bg-background px-3 text-lg font-bold outline-none placeholder:text-muted-foreground/50 focus:border-primary disabled:opacity-70"
                   />
                 </label>
                 <span className="w-6 shrink-0" aria-hidden>
@@ -158,8 +174,22 @@ export function GameBoard({ room, players, session, online }: Props) {
       {/* STOP bar */}
       <div className="fixed inset-x-0 bottom-0 z-30 border-t-2 border-border bg-background/90 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
         <div className="mx-auto max-w-md">
+          <div
+            className="mb-2 h-2 overflow-hidden rounded-full bg-muted"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={CATEGORIES.length}
+            aria-valuenow={filledCount}
+          >
+            <div
+              className="h-full rounded-full bg-success transition-[width] duration-300"
+              style={{ width: `${(filledCount / CATEGORIES.length) * 100}%` }}
+            />
+          </div>
           <p className="mb-2 text-center text-sm font-bold text-muted-foreground">
-            {canStop ? "Tudo preenchido! Mande o STOP!" : `${filledCount}/9 preenchidas — complete para pedir STOP`}
+            {canStop
+              ? "Tudo preenchido! Mande o STOP!"
+              : `${filledCount}/${CATEGORIES.length} preenchidas — complete para pedir STOP`}
           </p>
           <Button
             variant="stop"

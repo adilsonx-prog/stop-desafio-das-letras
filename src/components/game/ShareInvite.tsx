@@ -1,10 +1,12 @@
 import { Copy, MessageCircle, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { inviteMessage, roomInviteUrl } from "@/lib/game";
 
 export function ShareInvite({ code }: { code: string }) {
-  const url = typeof window !== "undefined" ? `${window.location.origin}/sala/${code}` : "";
-  const text = `Bora jogar STOP – Desafio das Letras! Entre na minha sala com o código ${code}: ${url}`;
+  // Same public address for every button — never the private editor preview.
+  const url = roomInviteUrl(code);
+  const text = inviteMessage(code, url);
 
   const copy = async () => {
     try {
@@ -18,7 +20,7 @@ export function ShareInvite({ code }: { code: string }) {
   const share = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({ title: "STOP – Desafio das Letras", text, url });
+        await navigator.share({ title: "STOP – Desafio das Letras", text });
       } catch {
         /* user cancelled */
       }
@@ -42,6 +44,9 @@ export function ShareInvite({ code }: { code: string }) {
           <Copy /> Copiar link
         </Button>
       </div>
+      <p className="break-all rounded-xl bg-muted px-3 py-2 text-center text-xs font-bold text-muted-foreground">
+        {url}
+      </p>
     </div>
   );
 }
