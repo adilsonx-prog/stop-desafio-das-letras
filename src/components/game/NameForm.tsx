@@ -31,7 +31,7 @@ export function NameField({ value, onChange }: { value: string; onChange: (v: st
 export function NameForm({ submitLabel, onSubmit, variant = "pop" }: Props) {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
-  useEffect(() => setName(getSavedName()), []);
+  useEffect(() => setName((n) => n || getSavedName()), []);
 
   return (
     <form

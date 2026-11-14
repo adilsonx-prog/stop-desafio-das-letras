@@ -32,7 +32,7 @@ function Home() {
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState<"create" | "join" | null>(null);
 
-  useEffect(() => setName(getSavedName()), []);
+  useEffect(() => setName((n) => n || getSavedName()), []);
 
   const validName = name.trim().length >= 2;
 
