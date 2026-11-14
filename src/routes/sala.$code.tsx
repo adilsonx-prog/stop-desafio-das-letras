@@ -49,7 +49,8 @@ function RoomPage() {
   const code = normalizeCode(params.code);
   const navigate = useNavigate();
   const [session, setSession] = useState<PlayerSession | null | undefined>(undefined);
-  const { data, isLoading, error } = useRoom(code);
+  const [sessionAt, setSessionAt] = useState(0);
+  const { data, isLoading, error, dataUpdatedAt, refetch } = useRoom(code);
   const room = data?.room ?? null;
   const players = data?.players ?? [];
   const online = usePresence(room?.id, session?.playerId);
@@ -61,6 +62,7 @@ function RoomPage() {
     checkPlayer(s)
       .then((ok) => {
         if (!ok) clearSession(code);
+        setSessionAt(Date.now());
         setSession(ok ? s : null);
       })
       .catch(() => setSession(s));
@@ -68,11 +70,12 @@ function RoomPage() {
 
   // If this player was removed from the room, drop the stale session.
   useEffect(() => {
-    if (session && data?.room && data.players.length && !data.players.some((p) => p.id === session.playerId)) {
+    if (!session || !data?.room || dataUpdatedAt <= sessionAt) return;
+    if (!data.players.some((p) => p.id === session.playerId)) {
       clearSession(code);
       setSession(null);
     }
-  }, [data, session, code]);
+  }, [data, dataUpdatedAt, sessionAt, session, code]);
 
   const leave = async () => {
     if (!session || !window.confirm("Sair da sala?")) return;
@@ -123,6 +126,8 @@ function RoomPage() {
                 saveName(name);
                 const s = toSession(r);
                 saveSession(room.code, s);
+                await refetch();
+                setSessionAt(Date.now());
                 setSession(s);
               } catch (e) {
                 toast.error(errorMessage(e));
