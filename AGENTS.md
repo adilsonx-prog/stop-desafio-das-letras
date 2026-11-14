@@ -28,3 +28,11 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+## Project rules
+
+- Players have no accounts: each device keeps a per-room `{playerId, secret}` in localStorage, and every game mutation goes through a SECURITY DEFINER Postgres function that checks that secret — clients only have SELECT on tables, so no one can edit another player's data.
+- `player_secrets` must never be granted to anon/authenticated; it is the only proof of player identity.
+- The category list lives in two places that must stay in sync: `CATEGORIES` in `src/lib/game.ts` and `public.stop_categories()` in the database.
+- Live updates come from realtime changes on `rooms` and `room_players` (refetch on any event) plus a presence channel for online dots; answers of the round in progress stay hidden by RLS until the round is scored.
+- The host's client scores the round (`finish_round`) ~2.5s after STOP so everyone's last answers land; any player may do it after 8s as a fallback.
