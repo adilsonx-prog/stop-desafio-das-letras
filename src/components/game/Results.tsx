@@ -73,10 +73,19 @@ export function Results({ room, players, session, online }: Props) {
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             {CATEGORIES.map((c) => (
-              <section key={c.key} className="surface overflow-hidden">
-                <header className={cn("flex items-center gap-2 px-4 py-2 text-primary-foreground", `bg-${c.color}`)}>
+              <section
+                key={c.key}
+                className={cn("surface overflow-hidden", c.featured && "border-cat-12 shadow-sogra sm:col-span-2")}
+              >
+                <header
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2 text-primary-foreground",
+                    c.featured ? "bg-sogra-gradient" : `bg-${c.color}`,
+                  )}
+                >
                   <span aria-hidden>{c.emoji}</span>
                   <h3 className="font-display text-base">{c.label}</h3>
+                  {c.featured && <span className="ml-auto text-sm" aria-hidden>😂</span>}
                 </header>
                 <ul className="divide-y-2 divide-border">
                   {(answers ?? []).map((a) => {
