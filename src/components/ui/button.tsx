@@ -16,12 +16,18 @@ const buttonVariants = cva(
         secondary: "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        pop: "bg-primary text-primary-foreground font-display text-lg tracking-wide shadow-[0_5px_0_var(--primary-shade)] hover:brightness-105 active:translate-y-[5px] active:shadow-none transition-all",
+        teal: "bg-accent text-accent-foreground font-display text-lg tracking-wide shadow-[0_5px_0_var(--accent-shade)] hover:brightness-105 active:translate-y-[5px] active:shadow-none transition-all",
+        soft: "bg-secondary text-secondary-foreground border-2 border-border font-bold hover:bg-muted active:translate-y-px",
+        stop: "bg-stop-gradient text-stop-foreground font-display tracking-wider shadow-[0_8px_0_var(--stop-shade)] active:translate-y-[8px] active:shadow-none transition-all disabled:opacity-40 disabled:grayscale-[60%]",
       },
       size: {
         default: "h-9 px-4 py-2",
         sm: "h-8 rounded-md px-3 text-xs",
         lg: "h-10 rounded-md px-8",
         icon: "h-9 w-9",
+        xl: "h-14 rounded-2xl px-6 w-full",
+        giant: "h-24 w-full rounded-3xl text-5xl",
       },
     },
     defaultVariants: {
