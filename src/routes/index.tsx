@@ -37,7 +37,10 @@ function Home() {
   const validName = name.trim().length >= 2;
 
   const create = async () => {
-    if (!validName) return toast.error("Digite seu nome primeiro.");
+    if (!validName) {
+      toast.error("Digite seu nome primeiro.");
+      return;
+    }
     setBusy("create");
     try {
       const r = await createRoom(name.trim());
@@ -53,8 +56,14 @@ function Home() {
   const join = async (e: FormEvent) => {
     e.preventDefault();
     const c = normalizeCode(code);
-    if (!validName) return toast.error("Digite seu nome primeiro.");
-    if (c.length !== 5) return toast.error("O código tem 5 caracteres.");
+    if (!validName) {
+      toast.error("Digite seu nome primeiro.");
+      return;
+    }
+    if (c.length !== 5) {
+      toast.error("O código tem 5 caracteres.");
+      return;
+    }
     setBusy("join");
     try {
       const r = await joinRoom(c, name.trim());
