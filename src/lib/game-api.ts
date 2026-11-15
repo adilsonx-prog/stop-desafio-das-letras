@@ -55,3 +55,15 @@ export async function resetRoom(s: PlayerSession) {
 export function toSession(r: JoinResult): PlayerSession {
   return { playerId: r.player_id, secret: r.secret, roomId: r.room_id };
 }
+
+export async function toggleDispute(s: PlayerSession, target: string, category: string) {
+  unwrap(await supabase.rpc("toggle_dispute", { ...auth(s), p_target: target, p_category: category }));
+}
+
+export async function confirmRound(s: PlayerSession) {
+  unwrap(await supabase.rpc("confirm_round", auth(s)));
+}
+
+export async function endGame(s: PlayerSession) {
+  unwrap(await supabase.rpc("end_game", auth(s)));
+}

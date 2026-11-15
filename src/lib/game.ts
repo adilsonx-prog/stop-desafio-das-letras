@@ -164,3 +164,22 @@ export function inviteMessage(code: string, url: string): string {
 }
 
 export const isValidCodeFormat = (code: string) => /^[A-Z0-9]{5}$/.test(code);
+
+/** Mirrors public.stop_votes_needed(): a majority of the *other* players annuls an answer. */
+export function votesNeeded(playerCount: number): number {
+  return Math.max(1, Math.floor((Math.max(playerCount, 1) - 1) / 2) + 1);
+}
+
+const MEDALS = ["🥇", "🥈", "🥉"];
+
+export function resultMessage(code: string, ranking: { name: string; score: number }[], url: string): string {
+  const lines = ranking.map((p, i) => `${MEDALS[i] ?? `${i + 1}º`} ${p.name} — ${p.score} pts`);
+  return [
+    "🏆 *STOP – Desafio das Letras*",
+    `Resultado da sala *${normalizeCode(code)}*:`,
+    "",
+    ...lines,
+    "",
+    `Jogue com a gente: ${url}`,
+  ].join("\n");
+}

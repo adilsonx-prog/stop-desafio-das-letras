@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Check, Clock, Hand, Loader2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { useNow, type Player, type Room } from "@/hooks/use-room";
+import { useQueryClient } from "@tanstack/react-query";
+import { pingRoom, useNow, type Player, type Room } from "@/hooks/use-room";
 import {
   allFilled,
   CATEGORIES,
@@ -40,6 +41,7 @@ export function GameBoard({ room, players, session, online }: Props) {
   const storageKey = `stop:answers:${room.code}:${round}`;
   const [answers, setAnswers] = useState<Answers>(() => loadAnswers(storageKey));
   const [stopping, setStopping] = useState(false);
+  const queryClient = useQueryClient();
   const latest = useRef(answers);
   latest.current = answers;
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
@@ -58,18 +60,40 @@ export function GameBoard({ room, players, session, online }: Props) {
     return () => clearTimeout(t);
   }, [answers, storageKey, stopped, session, round]);
 
-  // When anyone calls STOP: send final answers now, then score the round.
+  // Leaving for WhatsApp (or locking the phone): send answers right away so nothing is lost.
+  useEffect(() => {
+    if (stopped) return;
+    const flush = () => {
+      if (document.visibilityState === "hidden") saveAnswers(session, round, latest.current).catch(() => {});
+    };
+    document.addEventListener("visibilitychange", flush);
+    window.addEventListener("pagehide", flush);
+    return () => {
+      document.removeEventListener("visibilitychange", flush);
+      window.removeEventListener("pagehide", flush);
+    };
+  }, [stopped, session, round]);
+
+  // When anyone calls STOP: send final answers now (server accepts them for 3s), then score.
+  // The host scores after the window; others retry later in case the host is away.
   useEffect(() => {
     if (!stopped) return;
     navigator.vibrate?.([120, 60, 220]);
+    (document.activeElement as HTMLElement | null)?.blur?.();
     saveAnswers(session, round, latest.current).catch(() => {});
+    let retry: ReturnType<typeof setInterval> | undefined;
+    const finish = () => finishRound(session).catch(() => {});
     const t = setTimeout(
       () => {
-        finishRound(session).catch(() => {});
+        finish();
+        retry = setInterval(finish, isHost ? 3000 : 4000);
       },
-      isHost ? 2500 : 9000,
+      isHost ? 3500 : 9000,
     );
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t);
+      if (retry) clearInterval(retry);
+    };
   }, [stopped, session, round, isHost]);
 
   const setAnswer = (key: CategoryKey, value: string) => setAnswers((a) => ({ ...a, [key]: value }));
@@ -78,9 +102,11 @@ export function GameBoard({ room, players, session, online }: Props) {
     setStopping(true);
     try {
       await callStop(session, round, latest.current);
+      pingRoom(room.id);
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {
+      queryClient.invalidateQueries({ queryKey: ["room", room.code] });
       setStopping(false);
     }
   };

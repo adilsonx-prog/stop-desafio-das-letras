@@ -14,6 +14,55 @@ export type Database = {
   }
   public: {
     Tables: {
+      answer_disputes: {
+        Row: {
+          category: string
+          created_at: string
+          room_id: string
+          round_number: number
+          target_player_id: string
+          voter_player_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          room_id: string
+          round_number: number
+          target_player_id: string
+          voter_player_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          room_id?: string
+          round_number?: number
+          target_player_id?: string
+          voter_player_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "answer_disputes_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "answer_disputes_target_player_id_fkey"
+            columns: ["target_player_id"]
+            isOneToOne: false
+            referencedRelation: "room_players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "answer_disputes_voter_player_id_fkey"
+            columns: ["voter_player_id"]
+            isOneToOne: false
+            referencedRelation: "room_players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_secrets: {
         Row: {
           player_id: string
@@ -77,6 +126,7 @@ export type Database = {
           code: string
           created_at: string
           current_letter: string | null
+          game_start_round: number
           host_player_id: string | null
           id: string
           round_number: number
@@ -91,6 +141,7 @@ export type Database = {
           code: string
           created_at?: string
           current_letter?: string | null
+          game_start_round?: number
           host_player_id?: string | null
           id?: string
           round_number?: number
@@ -105,6 +156,7 @@ export type Database = {
           code?: string
           created_at?: string
           current_letter?: string | null
+          game_start_round?: number
           host_player_id?: string | null
           id?: string
           round_number?: number
@@ -123,6 +175,7 @@ export type Database = {
           id: string
           player_id: string
           points: Json
+          rejected: string[]
           room_id: string
           round_number: number
           total: number
@@ -133,6 +186,7 @@ export type Database = {
           id?: string
           player_id: string
           points?: Json
+          rejected?: string[]
           room_id: string
           round_number: number
           total?: number
@@ -143,6 +197,7 @@ export type Database = {
           id?: string
           player_id?: string
           points?: Json
+          rejected?: string[]
           room_id?: string
           round_number?: number
           total?: number
@@ -183,7 +238,15 @@ export type Database = {
         Args: { p_player_id: string; p_secret: string }
         Returns: boolean
       }
+      confirm_round: {
+        Args: { p_player_id: string; p_secret: string }
+        Returns: undefined
+      }
       create_room: { Args: { p_name: string }; Returns: Json }
+      end_game: {
+        Args: { p_player_id: string; p_secret: string }
+        Returns: undefined
+      }
       finish_round: {
         Args: { p_player_id: string; p_secret: string }
         Returns: undefined
@@ -213,6 +276,7 @@ export type Database = {
       stop_categories: { Args: never; Returns: string[] }
       stop_clean_answers: { Args: { p_answers: Json }; Returns: Json }
       stop_normalize: { Args: { t: string }; Returns: string }
+      stop_score_round: { Args: { p_room_id: string }; Returns: undefined }
       stop_verify_player: {
         Args: { p_player_id: string; p_secret: string }
         Returns: {
@@ -229,6 +293,16 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      stop_votes_needed: { Args: { p_players: number }; Returns: number }
+      toggle_dispute: {
+        Args: {
+          p_category: string
+          p_player_id: string
+          p_secret: string
+          p_target: string
+        }
+        Returns: undefined
       }
     }
     Enums: {

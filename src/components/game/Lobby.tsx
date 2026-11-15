@@ -98,6 +98,9 @@ export function Lobby({ room, players, session, online }: Props) {
         <p>
           <b className="text-muted-foreground">0 pontos</b> — vazia ou com outra letra
         </p>
+        <p className="text-muted-foreground">
+          Depois do STOP tem conferência: a maioria dos jogadores pode anular uma resposta.
+        </p>
       </section>
 
       <div className="sticky bottom-4">
