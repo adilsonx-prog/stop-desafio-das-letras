@@ -1,18 +1,22 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Loader2, LogOut } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { FinalResults } from "@/components/game/FinalResults";
 import { GameBoard } from "@/components/game/GameBoard";
 import { Lobby } from "@/components/game/Lobby";
 import { Logo } from "@/components/game/Logo";
 import { NameForm } from "@/components/game/NameForm";
+import { PlayerMenu } from "@/components/game/PlayerMenu";
 import { Results } from "@/components/game/Results";
+import { ThemeToggle } from "@/components/game/ThemeToggle";
 import { usePresence, useRoom } from "@/hooks/use-room";
 import {
   clearSession,
   errorMessage,
   getSession,
+  isValidCodeFormat,
   normalizeCode,
   saveName,
   saveSession,
@@ -50,6 +54,7 @@ function RoomPage() {
   const navigate = useNavigate();
   const [session, setSession] = useState<PlayerSession | null | undefined>(undefined);
   const [sessionAt, setSessionAt] = useState(0);
+  const validCode = isValidCodeFormat(code);
   const { data, isLoading, error, dataUpdatedAt, refetch } = useRoom(code);
   const room = data?.room ?? null;
   const players = data?.players ?? [];
@@ -88,35 +93,59 @@ function RoomPage() {
     navigate({ to: "/" });
   };
 
+  if (!validCode) {
+    return (
+      <Notice emoji="🔤" title="Código inválido">
+        O código da sala tem 5 letras ou números (ex.: <b>CL3RB</b>). Confira o convite e tente de novo.
+      </Notice>
+    );
+  }
+
   if (isLoading || session === undefined) return <FullLoader />;
 
-  if (error || !room) {
+  if (error && !room) {
     return (
-      <main className="mx-auto grid min-h-dvh max-w-md place-items-center px-5 text-center">
-        <div className="surface w-full space-y-4 p-6">
-          <p className="text-5xl">🤔</p>
-          <h1 className="font-display text-2xl">Sala não encontrada</h1>
-          <p className="text-muted-foreground">
-            A sala <b>{code}</b> não existe ou foi encerrada.
-          </p>
-          <Button variant="pop" size="xl" asChild>
-            <Link to="/">Voltar ao início</Link>
-          </Button>
-        </div>
-      </main>
+      <Notice emoji="📶" title="Sem conexão" retry={() => refetch()}>
+        Não foi possível carregar a sala <b>{code}</b>. Verifique sua internet e tente novamente.
+      </Notice>
+    );
+  }
+
+  if (!room) {
+    return (
+      <Notice emoji="🤔" title="Sala não encontrada">
+        A sala <b>{code}</b> não existe ou já foi encerrada (todos saíram). Peça um novo convite ou crie uma partida.
+      </Notice>
+    );
+  }
+
+  if (!session && players.length >= 15) {
+    return (
+      <Notice emoji="🙅" title="Sala cheia">
+        A sala <b>{room.code}</b> já tem 15 jogadores, o máximo permitido.
+      </Notice>
     );
   }
 
   if (!session) {
+    const inProgress = room.status !== "lobby";
     return (
       <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-5 py-8">
+        <div className="mb-2 flex justify-end">
+          <ThemeToggle />
+        </div>
         <Logo size="lg" />
         <section className="surface mt-8 space-y-4 p-5">
           <p className="text-center">
             Você foi convidado para a sala <b className="font-display text-xl text-primary">{room.code}</b>
             <br />
-            <span className="text-sm text-muted-foreground">{players.length} jogador(es) aguardando</span>
+            <span className="text-sm text-muted-foreground">{players.length} jogador(es) na sala</span>
           </p>
+          {inProgress && (
+            <p className="rounded-xl bg-muted px-3 py-2 text-center text-sm font-bold">
+              A partida já começou — você entra e joga a partir de agora.
+            </p>
+          )}
           <NameForm
             variant="teal"
             submitLabel="Entrar na partida"
@@ -146,17 +175,50 @@ function RoomPage() {
       <header className="sticky top-0 z-20 mb-4 border-b-2 border-border bg-background/85 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
           <Logo />
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <span className="rounded-full bg-muted px-3 py-1 font-display text-sm tracking-widest">{room.code}</span>
-            <Button variant="ghost" size="icon" onClick={leave} aria-label="Sair da sala">
-              <LogOut />
-            </Button>
+            <ThemeToggle />
+            <PlayerMenu name={players.find((p) => p.id === session.playerId)?.name} onLeave={leave} />
           </div>
         </div>
       </header>
       {room.status === "lobby" && <Lobby {...props} />}
       {(room.status === "playing" || room.status === "stopped") && <GameBoard key={room.round_number} {...props} />}
-      {room.status === "results" && <Results {...props} />}
+      {(room.status === "review" || room.status === "results") && <Results {...props} />}
+      {room.status === "final" && <FinalResults {...props} />}
     </div>
+  );
+}
+
+function Notice({
+  emoji,
+  title,
+  children,
+  retry,
+}: {
+  emoji: string;
+  title: string;
+  children: ReactNode;
+  retry?: () => void;
+}) {
+  return (
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-5 py-8 text-center">
+      <div className="mb-4 flex justify-end">
+        <ThemeToggle />
+      </div>
+      <div className="surface w-full space-y-4 p-6">
+        <p className="text-5xl">{emoji}</p>
+        <h1 className="font-display text-2xl">{title}</h1>
+        <p className="text-muted-foreground">{children}</p>
+        {retry && (
+          <Button variant="teal" size="xl" onClick={retry}>
+            Tentar de novo
+          </Button>
+        )}
+        <Button variant="pop" size="xl" asChild>
+          <Link to="/">Voltar ao início</Link>
+        </Button>
+      </div>
+    </main>
   );
 }

@@ -4,6 +4,7 @@ import { Loader2, LogIn, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/game/Logo";
+import { ThemeToggle } from "@/components/game/ThemeToggle";
 import { NameField } from "@/components/game/NameForm";
 import tiles from "@/assets/letter-tiles.png";
 import { errorMessage, getSavedName, normalizeCode, saveName, saveSession } from "@/lib/game";
@@ -77,7 +78,10 @@ function Home() {
   };
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 pb-10 pt-6">
+    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 pb-10 pt-4">
+      <div className="flex justify-end">
+        <ThemeToggle />
+      </div>
       <img
         src={tiles}
         alt="Peças coloridas com as letras de STOP"
