@@ -15,6 +15,13 @@
       "when": 1794629041006,
       "tag": "0001_thirteen_categories",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794703942215,
+      "tag": "0002_review_final_and_stop_lock",
+      "breakpoints": true
     }
   ]
 }
