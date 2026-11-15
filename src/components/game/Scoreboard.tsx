@@ -9,11 +9,13 @@ interface Props {
   online?: Set<string>;
   showRoundPoints?: boolean;
   compact?: boolean;
+  /** Round points not yet added to the score (review in progress). */
+  pendingRound?: boolean;
 }
 
 const MEDALS = ["🥇", "🥈", "🥉"];
 
-export function Scoreboard({ players, hostId, meId, online, showRoundPoints, compact }: Props) {
+export function Scoreboard({ players, hostId, meId, online, showRoundPoints, compact, pendingRound }: Props) {
   const sorted = [...players].sort((a, b) => b.score - a.score || a.joined_at.localeCompare(b.joined_at));
   return (
     <div className="surface p-4">
@@ -45,7 +47,13 @@ export function Scoreboard({ players, hostId, meId, online, showRoundPoints, com
               {p.id === meId && <span className="text-xs font-semibold text-muted-foreground">(você)</span>}
             </span>
             {showRoundPoints && (
-              <span className="rounded-full bg-success/20 px-2 py-0.5 text-xs font-extrabold text-success">
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-xs font-extrabold",
+                  pendingRound ? "border-2 border-dashed border-success text-success" : "bg-success/20 text-success",
+                )}
+                title={pendingRound ? "Pontos da rodada (aguardando confirmação)" : undefined}
+              >
                 +{p.last_round_points}
               </span>
             )}
