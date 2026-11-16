@@ -13,7 +13,7 @@ import {
 import { useTheme } from "@/hooks/use-theme";
 import { parseTheme } from "@/lib/theme";
 
-export function PlayerMenu({ name, onLeave }: { name?: string; onLeave: () => void }) {
+export function PlayerMenu({ name, onLeave }: { name?: string | undefined; onLeave: () => void }) {
   const { theme, setTheme } = useTheme();
   return (
     <DropdownMenu>
