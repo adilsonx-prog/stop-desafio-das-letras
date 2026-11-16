@@ -125,7 +125,7 @@ export function errorMessage(err: unknown): string {
 // ---------- Public invite links ----------
 
 /** Official published address. Invites never point at the private editor preview. */
-export const PUBLIC_APP_URL = "__PUBLIC_URL__";
+export const PUBLIC_APP_URL = "https://category-captain-club.lovable.app";
 
 /** Hosts that need a Lovable login (editor preview) or only exist on this machine. */
 export function isPrivateHost(hostname: string): boolean {

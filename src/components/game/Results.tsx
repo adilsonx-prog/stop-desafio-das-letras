@@ -65,7 +65,7 @@ export function Results({ room, players, session, online }: Props) {
               {reviewing ? `Conferência da rodada ${room.round_number}` : `Resultado da rodada ${room.round_number}`}
             </p>
             <p className="font-display text-2xl">
-              Você fez <span className="text-success">{me?.total ?? 0}</span> pontos
+              Você fez <span className="text-success">{isLoading ? "…" : (me?.total ?? 0)}</span> pontos
             </p>
           </div>
         </div>
@@ -128,7 +128,7 @@ export function Results({ room, players, session, online }: Props) {
                         >
                           {value || "—"}
                         </span>
-                        {annulled && (
+                        {annulled && !canContest && (
                           <span className="shrink-0 rounded-full bg-destructive/15 px-2 py-0.5 text-[11px] font-extrabold text-destructive">
                             anulada
                           </span>
@@ -150,6 +150,14 @@ export function Results({ room, players, session, online }: Props) {
                             {busy === key ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ban className="h-3.5 w-3.5" />}
                             {votes.length > 0 ? `${votes.length}/${need}` : "Contestar"}
                           </button>
+                        )}
+                        {!canContest && reviewing && votes.length > 0 && !annulled && (
+                          <span
+                            className="flex h-9 shrink-0 items-center gap-1 rounded-full border-2 border-dashed border-destructive px-2.5 text-xs font-extrabold text-destructive"
+                            title="Contestações recebidas"
+                          >
+                            <Ban className="h-3.5 w-3.5" /> {votes.length}/{need}
+                          </span>
                         )}
                         <PointsBadge pts={pts} />
                       </li>
