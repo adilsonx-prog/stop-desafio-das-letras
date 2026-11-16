@@ -128,7 +128,7 @@ export function Results({ room, players, session, online }: Props) {
                         >
                           {value || "—"}
                         </span>
-                        {annulled && (
+                        {annulled && !canContest && (
                           <span className="shrink-0 rounded-full bg-destructive/15 px-2 py-0.5 text-[11px] font-extrabold text-destructive">
                             anulada
                           </span>

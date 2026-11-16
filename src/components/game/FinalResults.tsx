@@ -149,8 +149,8 @@ export function FinalResults({ room, players, session, online }: Props) {
       <div className="fixed inset-x-0 bottom-0 z-30 border-t-2 border-border bg-background/90 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur">
         <div className="mx-auto max-w-md space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <Button variant="pop" className="h-12 rounded-xl" onClick={share}>
-              <Share2 /> Compartilhar resultado
+            <Button variant="pop" className="h-12 rounded-xl text-base" onClick={share} aria-label="Compartilhar resultado">
+              <Share2 /> Compartilhar
             </Button>
             <Button variant="soft" className="h-12 rounded-xl" asChild>
               <a href={`https://wa.me/?text=${encodeURIComponent(text)}`} target="_blank" rel="noreferrer">

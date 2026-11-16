@@ -35,4 +35,8 @@ use the editor.
 - `player_secrets` must never be granted to anon/authenticated; it is the only proof of player identity.
 - The category list lives in two places that must stay in sync: `CATEGORIES` in `src/lib/game.ts` and `public.stop_categories()` in the database.
 - Live updates come from realtime changes on `rooms` and `room_players` (refetch on any event) plus a presence channel for online dots; answers of the round in progress stay hidden by RLS until the round is scored.
-- The host's client scores the round (`finish_round`) ~2.5s after STOP so everyone's last answers land; any player may do it after 8s as a fallback.
+- Round flow is lobby → playing → stopped → review → results → (final); `call_stop` locks the room row so the first STOP wins. `save_answers` accepts writes only while playing or within 3s after STOP; the host's client calls `finish_round` (refuses until that window closes, retried; others after 9s as fallback), which scores into `review`.
+- Scoring lives only in `public.stop_score_round()` and is re-run on every contest (`toggle_dispute`); a majority of the other players (`stop_votes_needed`, mirrored by `votesNeeded` in `src/lib/game.ts`) annuls an answer. Round points reach `room_players.score` only when the host calls `confirm_round`.
+- Every device refetches the room on realtime changes, on the shared `room-events-<roomId>` broadcast (sent after STOP), on returning to the tab, and by polling every 2s while a round is live — so a phone that was in a WhatsApp call still locks.
+- Invite links are built by `roomInviteUrl()`: on editor/preview hosts they use `PUBLIC_APP_URL` (the published address), otherwise the current origin. Update `PUBLIC_APP_URL` if the published address changes.
+- Theme is per device: `stop:theme` in localStorage, applied to `<html>` (`dark`/`light`) by an inline head script before paint; light-mode colors are overrides on `:root.light` in `src/styles.css`.
