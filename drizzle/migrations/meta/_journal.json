@@ -22,6 +22,13 @@
       "when": 1794703942215,
       "tag": "0002_review_final_and_stop_lock",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794877927872,
+      "tag": "0003_room_settings_and_host_rulings",
+      "breakpoints": true
     }
   ]
 }

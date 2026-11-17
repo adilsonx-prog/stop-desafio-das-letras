@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Clock, Hand, Loader2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -6,15 +6,17 @@ import { useQueryClient } from "@tanstack/react-query";
 import { pingRoom, useNow, type Player, type Room } from "@/hooks/use-room";
 import {
   allFilled,
-  CATEGORIES,
   emptyAnswers,
   errorMessage,
+  gameRound,
   isValidAnswer,
+  roomCategories,
+  secondsLeft,
   type Answers,
-  type CategoryKey,
+  type Category,
   type PlayerSession,
 } from "@/lib/game";
-import { callStop, finishRound, saveAnswers } from "@/lib/game-api";
+import { callStop, finishRound, saveAnswers, timeUpRound } from "@/lib/game-api";
 import { cn } from "@/lib/utils";
 import { Scoreboard } from "./Scoreboard";
 
@@ -25,21 +27,22 @@ interface Props {
   online: Set<string>;
 }
 
-function loadAnswers(key: string): Answers {
+function loadAnswers(key: string, cats: Category[]): Answers {
   try {
     const raw = window.localStorage.getItem(key);
-    if (raw) return { ...emptyAnswers(), ...JSON.parse(raw) };
+    if (raw) return { ...emptyAnswers(cats), ...JSON.parse(raw) };
   } catch {
     /* ignore */
   }
-  return emptyAnswers();
+  return emptyAnswers(cats);
 }
 
 export function GameBoard({ room, players, session, online }: Props) {
   const round = room.round_number;
   const letter = room.current_letter ?? "?";
   const storageKey = `stop:answers:${room.code}:${round}`;
-  const [answers, setAnswers] = useState<Answers>(() => loadAnswers(storageKey));
+  const cats = useMemo(() => roomCategories(room.categories), [room.categories]);
+  const [answers, setAnswers] = useState<Answers>(() => loadAnswers(storageKey, cats));
   const [stopping, setStopping] = useState(false);
   const queryClient = useQueryClient();
   const latest = useRef(answers);
@@ -47,18 +50,23 @@ export function GameBoard({ room, players, session, online }: Props) {
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
   const stopped = room.status === "stopped";
   const isHost = room.host_player_id === session.playerId;
-  const filledCount = CATEGORIES.filter((c) => answers[c.key].trim()).length;
-  const canStop = allFilled(answers) && !stopped;
+  const now = useNow(500);
+  const left = secondsLeft(room.round_started_at, room.round_seconds, now);
+  const timeUp = left === 0;
+  // Time over locks this phone at once; the server closes the round for everyone.
+  const locked = stopped || timeUp;
+  const filledCount = cats.filter((c) => (answers[c.key] ?? "").trim()).length;
+  const canStop = allFilled(answers, cats) && !locked;
 
   // Persist locally and autosave to the server while typing.
   useEffect(() => {
     window.localStorage.setItem(storageKey, JSON.stringify(answers));
-    if (stopped) return;
+    if (locked) return;
     const t = setTimeout(() => {
       saveAnswers(session, round, answers).catch(() => {});
     }, 1200);
     return () => clearTimeout(t);
-  }, [answers, storageKey, stopped, session, round]);
+  }, [answers, storageKey, locked, session, round]);
 
   // Leaving for WhatsApp (or locking the phone): send answers right away so nothing is lost.
   useEffect(() => {
@@ -96,7 +104,27 @@ export function GameBoard({ room, players, session, online }: Props) {
     };
   }, [stopped, session, round, isHost]);
 
-  const setAnswer = (key: CategoryKey, value: string) => setAnswers((a) => ({ ...a, [key]: value }));
+  // Clock ran out: send final answers, then ask the server to close the round (retried until it does).
+  useEffect(() => {
+    if (!timeUp || stopped) return;
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    saveAnswers(session, round, latest.current).catch(() => {});
+    const close = () =>
+      timeUpRound(session, round)
+        .then(() => {
+          pingRoom(room.id);
+          queryClient.invalidateQueries({ queryKey: ["room", room.code] });
+        })
+        .catch(() => {});
+    const t = setTimeout(close, 600);
+    const retry = setInterval(close, 2000);
+    return () => {
+      clearTimeout(t);
+      clearInterval(retry);
+    };
+  }, [timeUp, stopped, session, round, room.id, room.code, queryClient]);
+
+  const setAnswer = (key: string, value: string) => setAnswers((a) => ({ ...a, [key]: value }));
 
   const onStop = async () => {
     setStopping(true);
@@ -116,11 +144,19 @@ export function GameBoard({ room, players, session, online }: Props) {
   return (
     <div className="mx-auto w-full max-w-5xl px-4 pb-40 lg:grid lg:grid-cols-[1fr_320px] lg:gap-6">
       <div>
-        <LetterHeader letter={letter} round={round} startedAt={room.round_started_at} stopped={stopped} />
+        <LetterHeader
+          letter={letter}
+          round={gameRound(room)}
+          maxRounds={room.max_rounds}
+          startedAt={room.round_started_at}
+          left={left}
+          now={now}
+          stopped={locked}
+        />
 
         <ul className="mt-4 space-y-3">
-          {CATEGORIES.map((c, i) => {
-            const value = answers[c.key];
+          {cats.map((c, i) => {
+            const value = answers[c.key] ?? "";
             const valid = isValidAnswer(value, letter);
             const filled = value.trim().length > 0;
             return (
@@ -156,13 +192,13 @@ export function GameBoard({ room, players, session, online }: Props) {
                       inputs.current[i] = el;
                     }}
                     value={value}
-                    disabled={stopped}
+                    disabled={locked}
                     maxLength={40}
                     autoComplete="off"
                     autoCorrect="off"
                     autoCapitalize={c.featured ? "sentences" : "words"}
                     spellCheck={false}
-                    enterKeyHint={i === CATEGORIES.length - 1 ? "done" : "next"}
+                    enterKeyHint={i === cats.length - 1 ? "done" : "next"}
                     placeholder={`${letter}…`}
                     aria-label={c.label}
                     onChange={(e) => setAnswer(c.key, e.target.value)}
@@ -204,18 +240,18 @@ export function GameBoard({ room, players, session, online }: Props) {
             className="mb-2 h-2 overflow-hidden rounded-full bg-muted"
             role="progressbar"
             aria-valuemin={0}
-            aria-valuemax={CATEGORIES.length}
+            aria-valuemax={cats.length}
             aria-valuenow={filledCount}
           >
             <div
               className="h-full rounded-full bg-success transition-[width] duration-300"
-              style={{ width: `${(filledCount / CATEGORIES.length) * 100}%` }}
+              style={{ width: `${(filledCount / cats.length) * 100}%` }}
             />
           </div>
           <p className="mb-2 text-center text-sm font-bold text-muted-foreground">
             {canStop
               ? "Tudo preenchido! Mande o STOP!"
-              : `${filledCount}/${CATEGORIES.length} preenchidas — complete para pedir STOP`}
+              : `${filledCount}/${cats.length} preenchidas — complete para pedir STOP`}
           </p>
           <Button
             variant="stop"
@@ -230,13 +266,15 @@ export function GameBoard({ room, players, session, online }: Props) {
         </div>
       </div>
 
-      {stopped && (
+      {locked && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-background/85 px-6 backdrop-blur-sm">
           <div className="text-center">
             <div className="mx-auto grid h-44 w-44 animate-slam place-items-center rounded-full bg-stop-gradient shadow-[0_10px_0_var(--stop-shade)]">
               <span className="font-display text-6xl text-stop-foreground">STOP!</span>
             </div>
-            <p className="mt-8 font-display text-2xl">{stopper ? `${stopper.name} pediu STOP!` : "STOP!"}</p>
+            <p className="mt-8 font-display text-2xl">
+              {stopper ? `${stopper.name} pediu STOP!` : room.round_seconds ? "⏰ Tempo esgotado!" : "STOP!"}
+            </p>
             <p className="mt-2 flex items-center justify-center gap-2 font-bold text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" /> Contando os pontos…
             </p>
@@ -250,18 +288,24 @@ export function GameBoard({ room, players, session, online }: Props) {
 function LetterHeader({
   letter,
   round,
+  maxRounds,
   startedAt,
+  left,
+  now,
   stopped,
 }: {
   letter: string;
   round: number;
+  maxRounds: number | null;
   startedAt: string | null;
+  left: number | null;
+  now: number;
   stopped: boolean;
 }) {
-  const now = useNow();
-  const elapsed = startedAt ? Math.max(0, Math.floor((now - new Date(startedAt).getTime()) / 1000)) : 0;
-  const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
-  const ss = String(elapsed % 60).padStart(2, "0");
+  const shown = left ?? (startedAt ? Math.max(0, Math.floor((now - new Date(startedAt).getTime()) / 1000)) : 0);
+  const mm = String(Math.floor(shown / 60)).padStart(2, "0");
+  const ss = String(shown % 60).padStart(2, "0");
+  const hurry = left != null && left <= 10 && !stopped;
   return (
     <div className="surface relative flex items-center gap-4 overflow-hidden p-4">
       <div
@@ -271,12 +315,21 @@ function LetterHeader({
         <span className="font-display text-7xl leading-none text-primary-foreground">{letter}</span>
       </div>
       <div className="min-w-0">
-        <p className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground">Rodada {round}</p>
+        <p className="text-xs font-extrabold uppercase tracking-widest text-muted-foreground">
+          Rodada {round}
+          {maxRounds ? ` de ${maxRounds}` : ""}
+        </p>
         <p className="font-display text-2xl leading-tight">
           Letra <span className="text-primary">{letter}</span>
         </p>
-        <p className="mt-1 flex items-center gap-1 text-sm font-bold text-accent tabular-nums">
-          <Clock className="h-4 w-4" /> {stopped ? "Tempo esgotado" : `${mm}:${ss}`}
+        <p
+          className={cn(
+            "mt-1 flex items-center gap-1 text-sm font-bold tabular-nums",
+            hurry ? "animate-pulse text-lg text-destructive" : "text-accent",
+          )}
+        >
+          <Clock className="h-4 w-4" />
+          {stopped ? "Tempo esgotado" : left != null ? `Faltam ${mm}:${ss}` : `${mm}:${ss}`}
         </p>
       </div>
     </div>

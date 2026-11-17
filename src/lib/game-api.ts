@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
-import type { Answers, PlayerSession } from "./game";
+import type { Answers, PlayerSession, RoomRules } from "./game";
 
 interface JoinResult {
   code: string;
@@ -66,4 +66,30 @@ export async function confirmRound(s: PlayerSession) {
 
 export async function endGame(s: PlayerSession) {
   unwrap(await supabase.rpc("end_game", auth(s)));
+}
+
+/** Host only, in the lobby. */
+export async function updateRoomSettings(s: PlayerSession, r: RoomRules) {
+  unwrap(
+    await supabase.rpc("update_room_settings", {
+      ...auth(s),
+      p_categories: r.categories.map((c) => ({ key: c.key, label: c.label.trim() })) as unknown as Json,
+      p_letters: r.letters,
+      // null = no limit; the generated types don't mark these as nullable.
+      p_round_seconds: r.roundSeconds as number,
+      p_max_rounds: r.maxRounds as number,
+    }),
+  );
+}
+
+/** Closes a timed round once the clock runs out (the server checks the time). */
+export async function timeUpRound(s: PlayerSession, round: number) {
+  unwrap(await supabase.rpc("time_up_round", { ...auth(s), p_round: round }));
+}
+
+/** Host decides a contested answer. */
+export async function ruleAnswer(s: PlayerSession, target: string, category: string, verdict: "annul" | "keep") {
+  unwrap(
+    await supabase.rpc("rule_answer", { ...auth(s), p_target: target, p_category: category, p_verdict: verdict }),
+  );
 }

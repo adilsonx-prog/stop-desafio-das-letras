@@ -14,7 +14,8 @@ export type CategoryKey =
   | "marca";
 
 export interface Category {
-  key: CategoryKey;
+  /** Built-in CategoryKey, or a custom key created by the host (c_xxxxxx). */
+  key: string;
   label: string;
   hint: string;
   emoji: string;
@@ -24,8 +25,9 @@ export interface Category {
   featured?: boolean;
 }
 
-// Must stay in sync with public.stop_categories() in the database.
-export const CATEGORIES: Category[] = [
+// Default list for new rooms. Must stay in sync with public.stop_categories() and the
+// default of rooms.categories in the database.
+export const CATEGORIES: (Category & { key: CategoryKey })[] = [
   { key: "nome", label: "Nome", hint: "Nome de pessoa", emoji: "🙋", color: "cat-1" },
   { key: "cidade", label: "Cidade", hint: "Qualquer cidade", emoji: "🏙️", color: "cat-10" },
   { key: "estado", label: "Estado ou País", hint: "Estado ou país", emoji: "🌎", color: "cat-11" },
@@ -48,10 +50,10 @@ export const CATEGORIES: Category[] = [
   { key: "marca", label: "Marca", hint: "Marca famosa", emoji: "🏷️", color: "cat-8" },
 ];
 
-export type Answers = Record<CategoryKey, string>;
+export type Answers = Record<string, string>;
 
-export const emptyAnswers = (): Answers =>
-  Object.fromEntries(CATEGORIES.map((c) => [c.key, ""])) as Answers;
+export const emptyAnswers = (cats: Category[] = CATEGORIES): Answers =>
+  Object.fromEntries(cats.map((c) => [c.key, ""])) as Answers;
 
 /** Mirrors public.stop_normalize(): trims, lowercases, strips accents, collapses spaces. */
 export function normalizeAnswer(value: string): string {
@@ -70,9 +72,91 @@ export function isValidAnswer(value: string, letter: string | null | undefined):
   return n.length >= 2 && n[0] === normalizeAnswer(letter)[0];
 }
 
-export function allFilled(answers: Answers): boolean {
-  return CATEGORIES.every((c) => answers[c.key]?.trim().length > 0);
+export function allFilled(answers: Answers, cats: Category[] = CATEGORIES): boolean {
+  return cats.every((c) => (answers[c.key] ?? "").trim().length > 0);
 }
+
+// ---------- Room rules (chosen by the host in the lobby) ----------
+
+export interface RoomCategory {
+  key: string;
+  label: string;
+}
+
+export const MIN_CATEGORIES = 4;
+export const MAX_CATEGORIES = 15;
+export const MIN_LETTERS = 5;
+export const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+/** Letters drawn by default (hard ones K, Q, W, X, Y, Z left out). Mirrors rooms.letters default. */
+export const DEFAULT_LETTERS = "ABCDEFGHIJLMNOPRSTUV".split("");
+export const HARD_LETTERS = ["K", "Q", "W", "X", "Y", "Z"];
+/** null = no time limit / play until the host ends the game. */
+export const ROUND_TIME_OPTIONS: (number | null)[] = [60, 90, 120, null];
+export const ROUND_COUNT_OPTIONS: (number | null)[] = [3, 5, 10, null];
+
+const CUSTOM_COLORS = ["cat-1", "cat-3", "cat-4", "cat-6", "cat-9", "cat-10", "cat-11", "cat-13"];
+
+/** Categories of a room, in play order, with display metadata. Falls back to the default list. */
+export function roomCategories(raw: unknown): Category[] {
+  if (!Array.isArray(raw) || raw.length === 0) return CATEGORIES;
+  let custom = 0;
+  return raw
+    .filter((c): c is RoomCategory => !!c && typeof c.key === "string" && typeof c.label === "string")
+    .map((c) => {
+      const builtIn = CATEGORIES.find((b) => b.key === c.key);
+      if (builtIn) return builtIn;
+      const color = CUSTOM_COLORS[custom++ % CUSTOM_COLORS.length];
+      return { key: c.key, label: c.label, hint: "Categoria da sala", emoji: "✏️", color };
+    });
+}
+
+export function customCategoryKey(): string {
+  return `c_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export interface RoomRules {
+  categories: RoomCategory[];
+  letters: string[];
+  roundSeconds: number | null;
+  maxRounds: number | null;
+}
+
+/** Same checks as public.update_room_settings(); returns a message, or null when valid. */
+export function validateRules(r: RoomRules): string | null {
+  const n = r.categories.length;
+  if (n < MIN_CATEGORIES || n > MAX_CATEGORIES) return `Escolha de ${MIN_CATEGORIES} a ${MAX_CATEGORIES} categorias.`;
+  const seen = new Set<string>();
+  for (const c of r.categories) {
+    const label = c.label.trim();
+    if (label.length < 2) return "Cada categoria precisa de um nome com pelo menos 2 letras.";
+    const norm = normalizeAnswer(label);
+    if (seen.has(norm)) return `Categoria repetida: ${label}`;
+    seen.add(norm);
+  }
+  const letters = new Set(r.letters.map((l) => l.toUpperCase()).filter((l) => ALPHABET.includes(l)));
+  if (letters.size < MIN_LETTERS) return `Deixe pelo menos ${MIN_LETTERS} letras no sorteio.`;
+  if (!ROUND_TIME_OPTIONS.includes(r.roundSeconds)) return "Tempo de rodada inválido.";
+  if (!ROUND_COUNT_OPTIONS.includes(r.maxRounds)) return "Número de rodadas inválido.";
+  return null;
+}
+
+export const roundTimeLabel = (s: number | null) => (s == null ? "Sem limite" : `${s}s`);
+export const roundCountLabel = (n: number | null) => (n == null ? "Livre" : `${n} rodadas`);
+
+/** Seconds left in a timed round (never negative); null when the room has no time limit. */
+export function secondsLeft(startedAt: string | null, roundSeconds: number | null, now: number): number | null {
+  if (roundSeconds == null || !startedAt) return null;
+  const end = new Date(startedAt).getTime() + roundSeconds * 1000;
+  return Math.max(0, Math.ceil((end - now) / 1000));
+}
+
+/** Round number inside the current game (rounds before game_start_round belong to earlier games). */
+export const gameRound = (room: { round_number: number; game_start_round: number }) =>
+  room.round_number - room.game_start_round;
+
+/** True when the room's round limit has been reached — no more rounds can start. */
+export const roundsDone = (room: { round_number: number; game_start_round: number; max_rounds: number | null }) =>
+  room.max_rounds != null && gameRound(room) >= room.max_rounds;
 
 // ---------- Local player session (no account needed) ----------
 
@@ -164,11 +248,6 @@ export function inviteMessage(code: string, url: string): string {
 }
 
 export const isValidCodeFormat = (code: string) => /^[A-Z0-9]{5}$/.test(code);
-
-/** Mirrors public.stop_votes_needed(): a majority of the *other* players annuls an answer. */
-export function votesNeeded(playerCount: number): number {
-  return Math.max(1, Math.floor((Math.max(playerCount, 1) - 1) / 2) + 1);
-}
 
 const MEDALS = ["🥇", "🥈", "🥉"];
 
