@@ -10,8 +10,13 @@ import {
   normalizeAnswer,
   normalizeCode,
   PUBLIC_APP_URL,
+  roomCategories,
   roomInviteUrl,
-  votesNeeded,
+  roundsDone,
+  secondsLeft,
+  validateRules,
+  DEFAULT_LETTERS,
+  type RoomRules,
 } from "./game";
 
 describe("isValidAnswer", () => {
@@ -74,13 +79,64 @@ describe("normalizeAnswer", () => {
   });
 });
 
-describe("votesNeeded", () => {
-  it("needs a majority of the other players to annul an answer", () => {
-    expect(votesNeeded(2)).toBe(1);
-    expect(votesNeeded(3)).toBe(2);
-    expect(votesNeeded(4)).toBe(2);
-    expect(votesNeeded(5)).toBe(3);
-    expect(votesNeeded(15)).toBe(8);
+const rules = (over: Partial<RoomRules> = {}): RoomRules => ({
+  categories: CATEGORIES.map((c) => ({ key: c.key, label: c.label })),
+  letters: DEFAULT_LETTERS,
+  roundSeconds: null,
+  maxRounds: null,
+  ...over,
+});
+
+describe("room rules", () => {
+  it("allows from 4 to 15 categories per game", () => {
+    const cats = (n: number) => Array.from({ length: n }, (_, i) => ({ key: `c_${i}`, label: `Categoria ${i}` }));
+    expect(validateRules(rules({ categories: cats(3) }))).not.toBeNull();
+    expect(validateRules(rules({ categories: cats(4) }))).toBeNull();
+    expect(validateRules(rules({ categories: cats(15) }))).toBeNull();
+    expect(validateRules(rules({ categories: cats(16) }))).not.toBeNull();
+  });
+
+  it("rejects a custom category with the same name as another", () => {
+    const categories = [...rules().categories.slice(0, 4), { key: "c_x", label: "  cidáde " }];
+    expect(validateRules(rules({ categories }))).toContain("repetida");
+  });
+
+  it("offers 60s, 90s, 120s or no time limit", () => {
+    for (const s of [60, 90, 120, null]) expect(validateRules(rules({ roundSeconds: s }))).toBeNull();
+    expect(validateRules(rules({ roundSeconds: 30 }))).not.toBeNull();
+  });
+
+  it("offers 3, 5, 10 rounds or free play", () => {
+    for (const n of [3, 5, 10, null]) expect(validateRules(rules({ maxRounds: n }))).toBeNull();
+    expect(validateRules(rules({ maxRounds: 7 }))).not.toBeNull();
+  });
+
+  it("leaves the hard letters K, Q, W, X, Y, Z out of the default draw", () => {
+    for (const l of ["K", "Q", "W", "X", "Y", "Z"]) expect(DEFAULT_LETTERS).not.toContain(l);
+  });
+
+  it("shows custom categories after the chosen built-in ones, in order", () => {
+    const cats = roomCategories([
+      { key: "nome", label: "Nome" },
+      { key: "c_ab12cd", label: "Time de futebol" },
+    ]);
+    expect(cats.map((c) => c.label)).toEqual(["Nome", "Time de futebol"]);
+    expect(allFilled({ nome: "Ana", c_ab12cd: "" }, cats)).toBe(false);
+    expect(allFilled({ nome: "Ana", c_ab12cd: "Atlético" }, cats)).toBe(true);
+  });
+
+  it("counts down the round time and stops at zero", () => {
+    const start = "2026-01-01T00:00:00.000Z";
+    const t0 = new Date(start).getTime();
+    expect(secondsLeft(start, 60, t0 + 15_000)).toBe(45);
+    expect(secondsLeft(start, 60, t0 + 90_000)).toBe(0);
+    expect(secondsLeft(start, null, t0)).toBeNull();
+  });
+
+  it("ends the game after the chosen number of rounds", () => {
+    expect(roundsDone({ round_number: 4, game_start_round: 2, max_rounds: 3 })).toBe(false);
+    expect(roundsDone({ round_number: 5, game_start_round: 2, max_rounds: 3 })).toBe(true);
+    expect(roundsDone({ round_number: 50, game_start_round: 0, max_rounds: null })).toBe(false);
   });
 });
 
