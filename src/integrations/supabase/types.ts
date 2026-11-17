@@ -123,13 +123,17 @@ export type Database = {
       }
       rooms: {
         Row: {
+          categories: Json
           code: string
           created_at: string
           current_letter: string | null
           game_start_round: number
           host_player_id: string | null
           id: string
+          letters: string[]
+          max_rounds: number | null
           round_number: number
+          round_seconds: number | null
           round_started_at: string | null
           status: string
           stopped_at: string | null
@@ -138,13 +142,17 @@ export type Database = {
           used_letters: string[]
         }
         Insert: {
+          categories?: Json
           code: string
           created_at?: string
           current_letter?: string | null
           game_start_round?: number
           host_player_id?: string | null
           id?: string
+          letters?: string[]
+          max_rounds?: number | null
           round_number?: number
+          round_seconds?: number | null
           round_started_at?: string | null
           status?: string
           stopped_at?: string | null
@@ -153,13 +161,17 @@ export type Database = {
           used_letters?: string[]
         }
         Update: {
+          categories?: Json
           code?: string
           created_at?: string
           current_letter?: string | null
           game_start_round?: number
           host_player_id?: string | null
           id?: string
+          letters?: string[]
+          max_rounds?: number | null
           round_number?: number
+          round_seconds?: number | null
           round_started_at?: string | null
           status?: string
           stopped_at?: string | null
@@ -173,6 +185,7 @@ export type Database = {
         Row: {
           answers: Json
           id: string
+          kept: string[]
           player_id: string
           points: Json
           rejected: string[]
@@ -184,6 +197,7 @@ export type Database = {
         Insert: {
           answers?: Json
           id?: string
+          kept?: string[]
           player_id: string
           points?: Json
           rejected?: string[]
@@ -195,6 +209,7 @@ export type Database = {
         Update: {
           answers?: Json
           id?: string
+          kept?: string[]
           player_id?: string
           points?: Json
           rejected?: string[]
@@ -260,6 +275,16 @@ export type Database = {
         Args: { p_player_id: string; p_secret: string }
         Returns: undefined
       }
+      rule_answer: {
+        Args: {
+          p_category: string
+          p_player_id: string
+          p_secret: string
+          p_target: string
+          p_verdict: string
+        }
+        Returns: undefined
+      }
       save_answers: {
         Args: {
           p_answers: Json
@@ -274,8 +299,11 @@ export type Database = {
         Returns: undefined
       }
       stop_categories: { Args: never; Returns: string[] }
-      stop_clean_answers: { Args: { p_answers: Json }; Returns: Json }
+      stop_clean_answers:
+        | { Args: { p_answers: Json }; Returns: Json }
+        | { Args: { p_answers: Json; p_keys: string[] }; Returns: Json }
       stop_normalize: { Args: { t: string }; Returns: string }
+      stop_room_categories: { Args: { p_room_id: string }; Returns: string[] }
       stop_score_round: { Args: { p_room_id: string }; Returns: undefined }
       stop_verify_player: {
         Args: { p_player_id: string; p_secret: string }
@@ -295,12 +323,27 @@ export type Database = {
         }
       }
       stop_votes_needed: { Args: { p_players: number }; Returns: number }
+      time_up_round: {
+        Args: { p_player_id: string; p_round: number; p_secret: string }
+        Returns: undefined
+      }
       toggle_dispute: {
         Args: {
           p_category: string
           p_player_id: string
           p_secret: string
           p_target: string
+        }
+        Returns: undefined
+      }
+      update_room_settings: {
+        Args: {
+          p_categories: Json
+          p_letters: string[]
+          p_max_rounds: number
+          p_player_id: string
+          p_round_seconds: number
+          p_secret: string
         }
         Returns: undefined
       }
