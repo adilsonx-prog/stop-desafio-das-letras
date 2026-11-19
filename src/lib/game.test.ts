@@ -68,7 +68,7 @@ describe("allFilled", () => {
     expect(allFilled(a)).toBe(false);
     for (const k of Object.keys(a) as (keyof typeof a)[]) a[k] = "x";
     expect(allFilled(a)).toBe(true);
-    a.sogra = " ";
+    a["sogra"] = " ";
     expect(allFilled(a)).toBe(false);
   });
 });

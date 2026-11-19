@@ -105,7 +105,7 @@ export function roomCategories(raw: unknown): Category[] {
     .map((c) => {
       const builtIn = CATEGORIES.find((b) => b.key === c.key);
       if (builtIn) return builtIn;
-      const color = CUSTOM_COLORS[custom++ % CUSTOM_COLORS.length];
+      const color = CUSTOM_COLORS[custom++ % CUSTOM_COLORS.length] ?? "cat-1";
       return { key: c.key, label: c.label, hint: "Categoria da sala", emoji: "✏️", color };
     });
 }
